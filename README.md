@@ -22,17 +22,17 @@ There are now two ways to configure a Blender file to be imported:
 
 1. Use the Assets->Create->EdysBlenderImporter Options menu item in the Unity editor.
 
-This will create a new options asset. Move the asset to the same folder containing your imported Blender model and rename the asset to the same name as your Blender model (no extension). Select the options asset and change options in the Inspector as necessary (but the defaults should work for most cases). Right-click the Blender file, then choose Reimport to apply the new settings.
+ This will create a new options asset. Move the asset to the same folder containing your imported Blender model and rename the asset to the same name as your Blender model (no extension). Select the options asset and change options in the Inspector as necessary (but the defaults should work for most cases). Right-click the Blender file, then choose Reimport to apply the new settings.
 
 2. Rename the model to include the string [importer] in the name or path (case insensitive). Example:
 
     Assets/Models/Scenery/Big House [importer].blend
 
-The [importer] string can be used in a path. All contained 3D files are processed:
+ The [importer] string can be used in a path. All contained 3D files are processed:
 
     Assets/Models/Player Vehicles [IMPORTER]/Car1.blend
 
-Right-click the file or folder, then choose Reimport to apply new settings after renaming.
+ Right-click the file or folder, then choose Reimport to apply new settings after renaming.
 
 ### How to use the advanced parameters
 
