@@ -19,21 +19,24 @@ using System.Collections.Generic;
 
 public class EdysBlenderImporter : AssetPostprocessor  
 	{
-	private bool m_fixBlender = true;
-	private bool m_optimize = false;
-	private bool m_zReverse = false;
-	private bool m_animFix = true;
-	private bool m_floatFix = true;
-	private bool m_postMods = true;
-	private bool m_forceFixRoot = false;
-	
-	private float m_floatFixThreshold = 1.53e-05f;
-	
-	
+
+    private EdysBlenderImporterOptions options = null;
+    private bool loadedOptionsAsset = false;
+
     void OnPostprocessModel (GameObject go)
 		{
-		string filePath = assetPath.ToLowerInvariant();		
-		if (Path.GetExtension(filePath) != ".blend") m_fixBlender = false;
+
+        // Look for options in an asset file with the same base name in the same folder
+        string optionsPath = Path.GetDirectoryName(assetPath) + "/" + Path.GetFileNameWithoutExtension(assetPath) + ".asset";
+        options = AssetDatabase.LoadAssetAtPath(optionsPath, typeof(EdysBlenderImporterOptions)) as EdysBlenderImporterOptions;
+        if (options == null)
+            options = ScriptableObject.CreateInstance<EdysBlenderImporterOptions>();
+        else
+            loadedOptionsAsset = true;
+
+        string filePath = assetPath.ToLowerInvariant();
+        
+		if (Path.GetExtension(filePath) != ".blend") options.fixBlender = false;
 		
 		// Look for specific importer commands in the file name or path.
 		// Imported objects can be located in a subfolder named with the import commands.
@@ -41,39 +44,40 @@ public class EdysBlenderImporter : AssetPostprocessor
 		
 		int i1 = filePath.LastIndexOf('[');
 		int i2 = filePath.LastIndexOf(']');
-		if (i1 < 0 || i2 < 0 || i1 >= i2) return;
-		
-		string[] tokens = filePath.Substring(i1+1, i2-i1-1).Split('.');
-		if (tokens.Length == 0 || tokens[0] != "importer") return;
-		
-		string options = "";
-		
-		for (int i=1, c=tokens.Length; i<c; i++)
-			{
-			string token = tokens[i];
-			
-			switch (token)
-				{
-				case "skipfix": m_fixBlender = false; break;
-				case "forcefix": m_fixBlender = true; break;
-				case "opt": m_optimize = true; break;
-				case "zreverse": m_zReverse = true; break;
-				case "noanimfix": m_animFix = false; break;
-				case "nofloatfix": m_floatFix = false; break;
-				case "nomods": m_postMods = false; break;
-				case "forcefixroot": m_forceFixRoot = true; break;
-				
-				default: 
-					token = "";
-					break;
-				}
-				
-			if (token != "") options += token + " ";
-			}
-			
+        if (i1 < 0 || i2 < 0 || i1 >= i2)
+            {
+            if (! loadedOptionsAsset) return;
+            } else {
+
+    		string[] tokens = filePath.Substring(i1+1, i2-i1-1).Split('.');
+    		if (tokens.Length == 0 || tokens[0] != "importer") return;
+    		
+    		for (int i=1, c=tokens.Length; i<c; i++)
+    			{
+    			string token = tokens[i];
+    			
+    			switch (token)
+    				{
+    				case "skipfix": options.fixBlender = false; break;
+    				case "forcefix": options.fixBlender = true; break;
+    				case "opt": options.optimize = true; break;
+    				case "zreverse": options.zReverse = true; break;
+    				case "noanimfix": options.animFix = false; break;
+    				case "nofloatfix": options.floatFix = false; break;
+    				case "nomods": options.postMods = false; break;
+    				case "forcefixroot": options.forceFixRoot = true; break;
+    				
+    				default: 
+    					break;
+    				}
+    				
+    			}
+
+            }
+
 		// Process the file with the specified options
 		
-		if (m_fixBlender || m_optimize)
+		if (options.fixBlender || options.optimize)
 			{
 			// Clean object's name (just for debug purposes, no effect on the imported object's name)
 			
@@ -90,13 +94,13 @@ public class EdysBlenderImporter : AssetPostprocessor
 			LogInfo("Click for details");
 			LogInfo("");		
 			
-			if (m_fixBlender)
+			if (options.fixBlender)
 				{
 				ProcessBlenderObject(go);
 				LogInfo("Blender file imported successfully.");
 				}
 			
-			if (m_optimize)
+			if (options.optimize)
 				{
 				MeshFilter[] meshes = go.GetComponentsInChildren<MeshFilter>(true);
 				
@@ -106,8 +110,25 @@ public class EdysBlenderImporter : AssetPostprocessor
 
 			LogFlush();
 			}
+
+        options = null;
+        loadedOptionsAsset = false;
+
 		}
 		
+    /*
+    // Menu option for creating asset to hold importer options.
+
+    [MenuItem ("Assets/Create/EdysBlenderImporter Options", false, 9999)]
+    static void CreateImportOptionsAsset ()
+        {
+        EdysBlenderImporterOptions asset = ScriptableObject.CreateInstance<EdysBlenderImporterOptions>();
+        AssetDatabase.CreateAsset(asset, "Assets/New EdysBlenderImporterOptions.asset");
+        AssetDatabase.SaveAssets();
+        EditorUtility.FocusProjectWindow();
+        Selection.activeObject = asset;
+        }
+    */
 
 	// Menu option for finding duplicated meshes in the current scene and reference them 
 	// as instances of a single unique mesh.
@@ -156,7 +177,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 		// as a single empty parent (no mesh) with all objects as children. The parent is NOT
 		// rotated in this case, but all the first-level children are.
 		
-		if (m_forceFixRoot || go.GetComponent<MeshFilter>() != null || IsMultipartObject(go))
+		if (options.forceFixRoot || go.GetComponent<MeshFilter>() != null || IsMultipartObject(go))
 			{
 			// Case A: Root object has been rotated X-90
 			
@@ -182,7 +203,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 		// Objects that have been fixed for X-90 are always imported as first-level objects
 		// in the animation clips.
 		
-		if (m_animFix)
+		if (options.animFix)
 			ProcessAnimations(go);
 		}
 		
@@ -196,7 +217,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 
 		// Turn the model around so the +Z axis = forward (in Blender +Y = forward)
 		
-		if (m_zReverse)
+        if (options.zReverse)
 			{
 			Quaternion q = Quaternion.AngleAxis(180.0f, Vector3.up);
 			go.transform.localPosition = q * go.transform.localPosition;
@@ -210,8 +231,8 @@ public class EdysBlenderImporter : AssetPostprocessor
 		
 		// Apply per-object commands and fix the dirty float values (floating-point precision)
 		
-		if (m_postMods) ApplyPostModifiers(go);
-		if (m_floatFix) FixFloatValues(go.transform, m_floatFixThreshold);
+        if (options.postMods) ApplyPostModifiers(go);
+        if (options.floatFix) FixFloatValues(go.transform, options.floatFixThreshold);
 		}
 	
 		
@@ -220,7 +241,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 		// 2nd level and below object: adjust local position and rotate the object
 		
 		Quaternion q = Quaternion.AngleAxis(-90.0f, Vector3.right);
-		if (m_zReverse) q = Quaternion.AngleAxis(180.0f, Vector3.up) * q;
+        if (options.zReverse) q = Quaternion.AngleAxis(180.0f, Vector3.up) * q;
 
 		foreach (Transform child in go.transform)
 			{
@@ -230,13 +251,13 @@ public class EdysBlenderImporter : AssetPostprocessor
 			// Convert rotation and scale from Blender (Right-handed) to Unity (Left-handed)
 			
 			ConvertRotation(child);
-			if (m_zReverse) RotationFix180(child);
+            if (options.zReverse) RotationFix180(child);
 			ConvertScale(child);
 			
 			// Postprocess
 			
-			if (m_postMods) ApplyPostModifiers(child.gameObject);
-			if (m_floatFix) FixFloatValues(child, m_floatFixThreshold);
+            if (options.postMods) ApplyPostModifiers(child.gameObject);
+            if (options.floatFix) FixFloatValues(child, options.floatFixThreshold);
 			
 			// Recursively fix children objects
 			
@@ -693,7 +714,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 				
 			// Turn around the forward axis if required
 				
-			if (m_zReverse)
+            if (options.zReverse)
 				{
 				keysX[k].value = -keysX[k].value;
 				keysZ[k].value = -keysZ[k].value;
@@ -759,7 +780,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 			
 			if (isFirstLevel)
 				{
-				if (m_zReverse)
+                if (options.zReverse)
 					{
 					// Turn around the local position
 					
@@ -777,7 +798,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 				// has been applied to 1st level.
 				
 				Quaternion q = Quaternion.AngleAxis(-90.0f, Vector3.right);
-				if (m_zReverse) q = Quaternion.AngleAxis(180.0f, Vector3.up) * q;
+                if (options.zReverse) q = Quaternion.AngleAxis(180.0f, Vector3.up) * q;
 				pos = q * pos;
 				
 				// Adjust the tangents of the Y and Z curves as result of the rotation X-90
@@ -792,15 +813,15 @@ public class EdysBlenderImporter : AssetPostprocessor
 				// If the model has been turned around (180º) the tangents for X and Z position
 				// curves must be inverted as well.
 				
-				if (m_zReverse)
+                if (options.zReverse)
 					{
 					InvertTangents(ref keysX[k]);
 					InvertTangents(ref keysZ[k]);
 					}
 				}
 				
-			if (m_floatFix)
-				pos = FixVector3(pos, m_floatFixThreshold);
+            if (options.floatFix)
+                pos = FixVector3(pos, options.floatFixThreshold);
 				
 			keysX[k].value = pos.x;
 			keysY[k].value = pos.y;

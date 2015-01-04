@@ -8,19 +8,31 @@ http://www.edy.es
 
 ### Setting up
 
-Copy the Editor folder to your project's Assets folder. No files will be touched by the Importer unless they are explictly configured to.
+Create a folder in your project's Assets folder to hold the assets of this project. It can be named anything you'd like, but I'd recommend something like "EdysBlenderImporter".
+
+Copy all the folders and files in this repository, except for the "Gizmos" folder, into the folder created above.
+
+Copy the "Gizmos" folder to your project's Assets folder. This step is optional, but, if followed, will provide a nice icon for any importer options assets created in your project.
+
+No Blender files will be touched by the Importer unless they are explictly configured to.
 
 ### How to import models with the Importer
 
-Rename the model to include the string [importer] in the name or path (case insensitive). Example:
+There are now two ways to configure a Blender file to be imported:
+
+1. Use the Assets->Create->EdysBlenderImporter Options menu item in the Unity editor.
+
+ This will create a new options asset. Move the asset to the same folder containing your imported Blender model and rename the asset to the same name as your Blender model (no extension). Select the options asset and change options in the Inspector as necessary (but the defaults should work for most cases). Right-click the Blender file, then choose Reimport to apply the new settings.
+
+2. Rename the model to include the string [importer] in the name or path (case insensitive). Example:
 
     Assets/Models/Scenery/Big House [importer].blend
 
-The [importer] string can be used in a path. All contained 3D files are processed:
+ The [importer] string can be used in a path. All contained 3D files are processed:
 
     Assets/Models/Player Vehicles [IMPORTER]/Car1.blend
 
-Right-click the file or folder, then choose Reimport to apply new settings after renaming.
+ Right-click the file or folder, then choose Reimport to apply new settings after renaming.
 
 ### How to use the advanced parameters
 
