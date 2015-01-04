@@ -316,7 +316,7 @@ public class EdysBlenderImporter : AssetPostprocessor
 				// Remove Mesh Renderer component
 				
 				case "norend":
-					Object.DestroyImmediate(go.renderer);
+					Object.DestroyImmediate(go.GetComponent<Renderer>());
 					break;
 					
 				// Add a mesh collider
